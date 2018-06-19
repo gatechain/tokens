@@ -1,13 +1,17 @@
 var FiatToken = artifacts.require('FiatToken');
+var UpgradedFiatToken = artifacts.require('UpgradedFiatToken');
 var EternalStorage = artifacts.require('EternalStorage');
 var tokenUtils = require('./TokenTestUtils');
+var helpers = require('./NegativeTestHelpers');
+var BigNumber = require('bignumber.js');
+var assertDiff = require('assert-diff');
+assertDiff.options.strict = true;
+
 var name = tokenUtils.name;
 var symbol = tokenUtils.symbol;
 var currency = tokenUtils.currency;
 var decimals = tokenUtils.decimals;
 var bigZero = tokenUtils.bigZero;
-var BigNumber = require('bignumber.js');
-
 var checkVariables = tokenUtils.checkVariables;
 var expectRevert = tokenUtils.expectRevert;
 var blacklist = tokenUtils.blacklist;
@@ -21,9 +25,58 @@ var masterMinterAccount = tokenUtils.masterMinterAccount;
 var minterAccount = tokenUtils.minterAccount;
 var pauserAccount = tokenUtils.pauserAccount;
 var blacklisterAccount = tokenUtils.blacklisterAccount;
+var roleAddressChangerRole = tokenUtils.roleAddressChangerRole;
 
-contract('Negative Tests', function (accounts) {
-  var amount = 100;
+var fail_mint_paused = helpers.fail_mint_paused;
+var fail_mint_senderNotMinter = helpers.fail_mint_senderNotMinter;
+var fail_mint_senderBlacklisted = helpers.fail_mint_senderBlacklisted;
+var fail_mint_recipientBlacklisted = helpers.fail_mint_recipientBlacklisted;
+var fail_mint_allowanceLessThanAmount = helpers.fail_mint_allowanceLessThanAmount;
+var fail_mint_toZeroAddress = helpers.fail_mint_toZeroAddress;
+var fail_mint_contractNotOwner = helpers.fail_mint_contractNotOwner;
+var fail_approve_spenderBlacklisted = helpers.fail_approve_spenderBlacklisted;
+var fail_approve_messageSenderBlacklisted = helpers.fail_approve_messageSenderBlacklisted;
+var fail_approve_paused = helpers.fail_approve_paused;
+var fail_approve_contractNotOwner = helpers.fail_approve_contractNotOwner;
+var fail_transferFrom_toZeroAddress = helpers.fail_transferFrom_toZeroAddress;
+var fail_transferFrom_amountGreaterThanBalance = helpers.fail_transferFrom_amountGreaterThanBalance;
+var fail_transferFrom_recipientBlacklisted = helpers.fail_transferFrom_recipientBlacklisted;
+var fail_transferFrom_messageSenderBlacklisted = helpers.fail_transferFrom_messageSenderBlacklisted;
+var fail_transferFrom_fromBlacklisted = helpers.fail_transferFrom_fromBlacklisted;
+var fail_transferFrom_amountGreaterThanAllowance = helpers.fail_transferFrom_amountGreaterThanAllowance;
+var fail_transferFrom_paused = helpers.fail_transferFrom_paused;
+var fail_transferFrom_contractNotOwner = helpers.fail_transferFrom_contractNotOwner;
+var fail_transfer_toZeroAddress = helpers.fail_transfer_toZeroAddress;
+var fail_transfer_amountGreaterThanBalance = helpers.fail_transfer_amountGreaterThanBalance;
+var fail_transfer_recipientBlacklisted = helpers.fail_transfer_recipientBlacklisted;
+var fail_transfer_senderBlacklisted = helpers.fail_transfer_senderBlacklisted;
+var fail_transfer_paused = helpers.fail_transfer_paused;
+var fail_transfer_contractNotOwner = helpers.fail_transfer_contractNotOwner;
+var fail_configureMinter_senderNotMasterMinter = helpers.fail_configureMinter_senderNotMasterMinter;
+var fail_configureMinter_contractNotOwner = helpers.fail_configureMinter_contractNotOwner;
+var fail_configureMinter_paused = helpers.fail_configureMinter_paused;
+var fail_removeMinter_senderNotMasterMinter = helpers.fail_removeMinter_senderNotMasterMinter;
+var fail_removeMinter_contractNotOwner = helpers.fail_removeMinter_contractNotOwner;
+var fail_burn_balanceLessThanAmount = helpers.fail_burn_balanceLessThanAmount;
+var fail_burn_amountNegative = helpers.fail_burn_amountNegative;
+var fail_burn_senderBlacklisted = helpers.fail_burn_senderBlacklisted;
+var fail_burn_paused = helpers.fail_burn_paused;
+var fail_burn_senderNotMinter = helpers.fail_burn_senderNotMinter;
+var fail_burn_afterRemoverMinter = helpers.fail_burn_afterRemoverMinter;
+var fail_burn_contractNotOwner = helpers.fail_burn_contractNotOwner;
+var fail_updateRoleAddress_senderNotRoleAddressChanger = helpers.fail_updateRoleAddress_senderNotRoleAddressChanger;
+var fail_updateRoleAddress_senderIsOldRoleAddressChanger = helpers.fail_updateRoleAddress_senderIsOldRoleAddressChanger;
+var fail_updateUpgraderAddress_senderNotUpgrader = helpers.fail_updateUpgraderAddress_senderNotUpgrader;
+var fail_pause_senderNotPauser = helpers.fail_pause_senderNotPauser;
+var fail_unpause_senderNotPauser = helpers.fail_unpause_senderNotPauser;
+var fail_blacklist_senderNotBlacklister = helpers.fail_blacklist_senderNotBlacklister;
+var fail_unblacklist_senderNotBlacklister = helpers.fail_unblacklist_senderNotBlacklister;
+var fail_upgrade_senderNotUpgrader = helpers.fail_upgrade_senderNotUpgrader;
+var fail_upgrade_upgradedAddressIsNotZeroAddress = helpers.fail_upgrade_upgradedAddressIsNotZeroAddress;
+var fail_upgrade_newAddressIsZeroAddress = helpers.fail_upgrade_newAddressIsZeroAddress;
+var fail_disablePriorContract_senderNotPauser = helpers.fail_disablePriorContract_senderNotPauser;
+
+contract('FiatToken', function (accounts) {
 
   beforeEach(async function checkBefore() {
     token = await FiatToken.new(
@@ -38,661 +91,229 @@ contract('Negative Tests', function (accounts) {
       upgraderAccount,
       tokenOwnerAccount);
 
-    let tokenAddress = token.address;
-
     let dataContractAddress = await token.getDataContractAddress();
     let storage = EternalStorage.at(dataContractAddress);
-    assert.equal(await storage.owner.call(), tokenAddress)
+    assert.equal(await storage.owner.call(), token.address);
   });
 
-  it('should check variable defaults are correct for negative tests', async function () {
-    await checkVariables(token, []);
-  })
+  // it('should check variable defaults are correct for negative tests', async function () {
+  //   await checkVariables(token, []);
+  // });
 
   //Begin mint tests
   it('should fail to mint when paused', async function () {
-    //Configure minter
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    await token.pause({from: pauserAccount});
-
-    var customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)},
-      {'variable': 'paused', 'expectedValue': true}
-    ]
-    await checkVariables(token, customVars);
-
-    await expectRevert(token.mint(arbitraryAccount, 50, {from: minterAccount}));
-    await checkVariables(token, customVars);
-  })
+    await fail_mint_paused(token);
+  });
 
   it('should fail to mint when message sender is not a minter', async function () {
-    //Note: minterAccount has not yet been configured as a minter
-    await expectRevert(token.mint(arbitraryAccount, 50, {from: minterAccount}));
-    await checkVariables(token, []);
-  })
+    await fail_mint_senderNotMinter(token);
+  });
 
   it('should fail to mint when message sender is blacklisted', async function () {
-    await token.blacklist(minterAccount, {from: blacklisterAccount});
-
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    var customVars = [
-      {'variable': 'isAccountBlacklisted.minterAccount', 'expectedValue': true},
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)}
-    ]
-    await checkVariables(token, customVars);
-
-    await expectRevert(token.mint(arbitraryAccount, 50, {from: minterAccount}));
-    await checkVariables(token, customVars);
-  })
+    await fail_mint_senderBlacklisted(token);
+  });
 
   it('should fail to mint when recipient is blacklisted', async function () {
-    await token.blacklist(arbitraryAccount, {from: blacklisterAccount});
-
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    var customVars = [
-      {'variable': 'isAccountBlacklisted.arbitraryAccount', 'expectedValue': true},
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)}
-    ]
-    await checkVariables(token, customVars);
-
-    await expectRevert(token.mint(arbitraryAccount, 50, {from: minterAccount}));
-    await checkVariables(token, customVars);
-  })
+    await fail_mint_recipientBlacklisted(token);
+  });
 
   it('should fail to mint when allowance of minter is less than amount', async function () {
-    await token.configureMinter(minterAccount, amount - 1, {from: masterMinterAccount});
-    var customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 1)}
-    ]
-    await checkVariables(token, customVars);
-
-    await expectRevert(token.mint(arbitraryAccount, amount, {from: minterAccount}));
-    await checkVariables(token, customVars);
-  })
+    await fail_mint_allowanceLessThanAmount(token);
+  });
 
   it('should fail to mint to 0x0 address', async function () {
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    var customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)}
-    ]
-    await checkVariables(token, customVars);
-
-    await expectRevert(token.mint("0x0", amount, {from: minterAccount}));
-    await checkVariables(token, customVars);
-
-    await expectRevert(token.mint("0x0000000000000000000000000000000000000000", amount, {from: minterAccount}));
-
-    await checkVariables(token, customVars);
-
-    await expectRevert(token.mint(0x0000000000000000000000000000000000000000, amount, {from: minterAccount}));
-
-    await checkVariables(token, customVars);
-
+    await fail_mint_toZeroAddress(token);
   });
 
   it('should fail to mint when contract is not owner', async function () {
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    var customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)}
-    ]
-    await checkVariables(token, customVars);
-
-    var dataContractAddress = await token.getDataContractAddress();
-    var storage = EternalStorage.at(dataContractAddress);
-    await token.upgrade(arbitraryAccount, {from: upgraderAccount});
-    assert.equal(await storage.owner.call(), arbitraryAccount);
-
-    await expectRevert(token.mint(pauserAccount, 50, {from: minterAccount}));
-  })
+    await fail_mint_contractNotOwner(token);
+  });
 
   //Begin approve tests
 
-  /*
-    SUCCESSFUL APPROVE
-  it('should approve a spend and set allowed amount', async function () {
-    await token.approve(minterAccount, 100, {from: arbitraryAccount});
-    customVars = [{'variable': 'allowance.arbitraryAccount.minterAccount', 'expectedValue': bigHundred}];
-    await checkVariables(token, customVars)
-  });
-  */
-
   it('should fail to approve when spender is blacklisted', async function () {
-    await token.blacklist(minterAccount, {from: blacklisterAccount});
-
-    await expectRevert(token.approve(minterAccount, 100, {from: arbitraryAccount}));
-
-    await checkVariables(token, [{'variable': 'isAccountBlacklisted.minterAccount', 'expectedValue': true}]);
-  })
+    await fail_approve_spenderBlacklisted(token);
+  });
 
   it('should fail to approve when msg.sender is blacklisted', async function () {
-    await token.blacklist(arbitraryAccount, {from: blacklisterAccount});
-
-    await expectRevert(token.approve(minterAccount, 100, {from: arbitraryAccount}));
-
-    await checkVariables(token, [{'variable': 'isAccountBlacklisted.arbitraryAccount', 'expectedValue': true}]);
-  })
+    await fail_approve_messageSenderBlacklisted(token);
+  });
 
   it('should fail to approve when contract is paused', async function () {
-    await token.pause({from: pauserAccount});
-
-    await expectRevert(token.approve(minterAccount, 100, {from: arbitraryAccount}));
-
-    await checkVariables(token, [{'variable': 'paused', 'expectedValue': true}]);
-  })
+    await fail_approve_paused(token);
+  });
 
   it('should fail to approve when contract is not owner', async function () {
-    var dataContractAddress = await token.getDataContractAddress();
-    var storage = EternalStorage.at(dataContractAddress);
-    await token.upgrade(arbitraryAccount, {from: upgraderAccount});
-    assert.equal(await storage.owner.call(), arbitraryAccount);
-
-    await expectRevert(token.approve(pauserAccount, 50, {from: minterAccount}));
-  })
+    await fail_approve_contractNotOwner(token);
+  });
 
   //Begin transferFrom tests
 
-  //SUCCESSFUL TRANSFERFROM
-  /*it('should transferFrom, reducing sender balance by amount and increasing recipient balance by amount', async function () {
-    amount = 100;
-
-    // configure minter
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    var customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.mint(arbitraryAccount, 50, {from: minterAccount});
-
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.approve(upgraderAccount, 50, {from: arbitraryAccount});
-
-    await token.transferFrom(arbitraryAccount, pauserAccount, 50, {from: upgraderAccount})
-
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': bigZero},
-      {'variable': 'balances.pauserAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)}
-    ]
-    await checkVariables(token, customVars);
-  })*/
-
   it('should fail to transferFrom to 0x0 address', async function () {
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    var customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.mint(arbitraryAccount, 50, {from: minterAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.approve(upgraderAccount, 50, {from: arbitraryAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)},
-      {'variable': 'allowance.arbitraryAccount.upgraderAccount', 'expectedValue': new BigNumber(50)}
-    ]
-    await checkVariables(token, customVars);
-
-    await expectRevert(token.transferFrom(arbitraryAccount, "0x0", 50, {from: upgraderAccount}));
-    await checkVariables(token, customVars);
-  })
+    await fail_transferFrom_toZeroAddress(token);
+  });
 
   it('should fail to transferFrom an amount greater than balance', async function () {
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.mint(arbitraryAccount, 50, {from: minterAccount});
-    var customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.approve(upgraderAccount, amount, {from: arbitraryAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)},
-      {'variable': 'allowance.arbitraryAccount.upgraderAccount', 'expectedValue': new BigNumber(amount)},
-    ]
-    await checkVariables(token, customVars);
-
-    await expectRevert(token.transferFrom(arbitraryAccount, pauserAccount, amount, {from: upgraderAccount}));
-    await checkVariables(token, customVars);
-  })
+    await fail_transferFrom_amountGreaterThanBalance(token);
+  });
 
   it('should fail to transferFrom to blacklisted recipient', async function () {
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.mint(upgraderAccount, 50, {from: minterAccount});
-    var customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.upgraderAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.approve(pauserAccount, 50, {from: upgraderAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.upgraderAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)},
-      {'variable': 'allowance.upgraderAccount.pauserAccount', 'expectedValue': new BigNumber(50)},
-    ]
-    await checkVariables(token, customVars);
-
-    await blacklist(token, arbitraryAccount);
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.upgraderAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)},
-      {'variable': 'allowance.upgraderAccount.pauserAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'isAccountBlacklisted.arbitraryAccount', 'expectedValue': true}
-    ]
-    await checkVariables(token, customVars);
-
-    await expectRevert(token.transferFrom(upgraderAccount, arbitraryAccount, 50, {from: pauserAccount}));
-    await checkVariables(token, customVars);
-  })
+    await fail_transferFrom_recipientBlacklisted(token);
+  });
 
   it('should fail to transferFrom from blacklisted msg.sender', async function () {
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.mint(upgraderAccount, 50, {from: minterAccount});
-    var customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.upgraderAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.approve(arbitraryAccount, 50, {from: upgraderAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.upgraderAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)},
-      {'variable': 'allowance.upgraderAccount.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-    ]
-    await checkVariables(token, customVars);
-
-    await blacklist(token, arbitraryAccount);
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.upgraderAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)},
-      {'variable': 'allowance.upgraderAccount.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'isAccountBlacklisted.arbitraryAccount', 'expectedValue': true}
-    ]
-    await checkVariables(token, customVars);
-
-    await expectRevert(token.transferFrom(upgraderAccount, pauserAccount, 50, {from: arbitraryAccount}));
-    await checkVariables(token, customVars);
-  })
+    await fail_transferFrom_messageSenderBlacklisted(token);
+  });
 
   it('should fail to transferFrom when from is blacklisted', async function () {
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.mint(arbitraryAccount, 50, {from: minterAccount});
-    var customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.approve(upgraderAccount, 50, {from: arbitraryAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)},
-      {'variable': 'allowance.arbitraryAccount.upgraderAccount', 'expectedValue': new BigNumber(50)},
-    ]
-    await checkVariables(token, customVars);
-
-    await blacklist(token, arbitraryAccount);
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)},
-      {'variable': 'allowance.arbitraryAccount.upgraderAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'isAccountBlacklisted.arbitraryAccount', 'expectedValue': true}
-    ]
-    await checkVariables(token, customVars);
-
-    await expectRevert(token.transferFrom(arbitraryAccount, pauserAccount, 50, {from: upgraderAccount}));
-    await checkVariables(token, customVars);
-  })
+    await fail_transferFrom_fromBlacklisted(token);
+  });
 
   it('should fail to transferFrom an amount greater than allowed for msg.sender', async function () {
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.mint(arbitraryAccount, 50, {from: minterAccount});
-    var customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.approve(upgraderAccount, 50, {from: arbitraryAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)},
-      {'variable': 'allowance.arbitraryAccount.upgraderAccount', 'expectedValue': new BigNumber(50)},
-    ]
-    await checkVariables(token, customVars);
-
-    await expectRevert(token.transferFrom(arbitraryAccount, pauserAccount, 60, {from: upgraderAccount}));
-    await checkVariables(token, customVars);
-  })
+    await fail_transferFrom_amountGreaterThanAllowance(token);
+  });
 
   it('should fail to transferFrom when paused', async function () {
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    var customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.mint(arbitraryAccount, 50, {from: minterAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.approve(upgraderAccount, 50, {from: arbitraryAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)},
-      {'variable': 'allowance.arbitraryAccount.upgraderAccount', 'expectedValue': new BigNumber(50)},
-    ]
-    await checkVariables(token, customVars);
-
-    await token.pause({from: pauserAccount});
-    customVars = [
-      {'variable': 'allowance.arbitraryAccount.upgraderAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)},
-      {'variable': 'allowance.arbitraryAccount.upgraderAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'paused', 'expectedValue': true}
-    ]
-    await checkVariables(token, customVars);
-
-    await expectRevert(token.transferFrom(arbitraryAccount, pauserAccount, 50, {from: upgraderAccount}));
-    await checkVariables(token, customVars);
-  })
+    await fail_transferFrom_paused(token);
+  });
 
   it('should fail to transferFrom when contract is not owner', async function () {
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    var customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.mint(arbitraryAccount, 50, {from: minterAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.approve(upgraderAccount, 50, {from: arbitraryAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)},
-      {'variable': 'allowance.arbitraryAccount.upgraderAccount', 'expectedValue': new BigNumber(50)},
-    ]
-    await checkVariables(token, customVars);
-
-    var dataContractAddress = await token.getDataContractAddress();
-    var storage = EternalStorage.at(dataContractAddress);
-    await token.upgrade(pauserAccount, {from: upgraderAccount});
-    assert.equal(await storage.owner.call(), pauserAccount);
-
-    await expectRevert(token.transferFrom(arbitraryAccount, pauserAccount, 50, {from: upgraderAccount}));
-  })
+    await fail_transferFrom_contractNotOwner(token);
+  });
 
 
   //Begin transfer tests
 
   it('should fail to transfer to 0x0 address', async function () {
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    var customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)}
-    ]
-    await checkVariables(token, customVars);
+    await fail_transfer_toZeroAddress(token);
+  });
 
-    await token.mint(arbitraryAccount, 50, {from: minterAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)}
-    ]
-    await checkVariables(token, customVars);
-
-    await expectRevert(token.transfer("0x0", 50, {from: arbitraryAccount}));
-    await checkVariables(token, customVars);
-  })
-
-  it('should fail to transfer an amount greater than balance', async function() {
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.mint(arbitraryAccount, 50, {from: minterAccount});
-    var customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)}
-    ]
-    await checkVariables(token, customVars);
-
-    await expectRevert(token.transfer(pauserAccount, amount, {from: arbitraryAccount}));
-    await checkVariables(token, customVars);
-  })
+  it('should fail to transfer an amount greater than balance', async function () {
+    await fail_transfer_amountGreaterThanBalance(token);
+  });
 
   it('should fail to transfer to blacklisted recipient', async function () {
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.mint(upgraderAccount, 50, {from: minterAccount});
-    var customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.upgraderAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)}
-    ]
-    await checkVariables(token, customVars);
-
-    await blacklist(token, arbitraryAccount);
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.upgraderAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)},
-      {'variable': 'isAccountBlacklisted.arbitraryAccount', 'expectedValue': true}
-    ]
-    await checkVariables(token, customVars);
-
-    await expectRevert(token.transfer(arbitraryAccount, 50, {from: upgraderAccount}));
-    await checkVariables(token, customVars);
-  })
+    await fail_transfer_recipientBlacklisted(token);
+  });
 
   it('should fail to transfer when sender is blacklisted', async function () {
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.mint(arbitraryAccount, 50, {from: minterAccount});
-    var customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)}
-    ]
-    await checkVariables(token, customVars);
-
-    await blacklist(token, arbitraryAccount);
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)},
-      {'variable': 'isAccountBlacklisted.arbitraryAccount', 'expectedValue': true}
-    ]
-    await checkVariables(token, customVars);
-
-    await expectRevert(token.transfer(upgraderAccount, 50, {from: arbitraryAccount}));
-    await checkVariables(token, customVars);
-  })
+    await fail_transfer_senderBlacklisted(token);
+  });
 
   it('should fail to transfer when paused', async function () {
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    var customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.mint(arbitraryAccount, 50, {from: minterAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.pause({from: pauserAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)},
-      {'variable': 'paused', 'expectedValue': true}
-    ]
-    await checkVariables(token, customVars);
-
-    await expectRevert(token.transfer(upgraderAccount, 50, {from: arbitraryAccount}));
-    await checkVariables(token, customVars);
-  })
+    await fail_transfer_paused(token);
+  });
 
   it('should fail to transfer when contract is not owner', async function () {
-    await token.configureMinter(minterAccount, amount, {from: masterMinterAccount});
-    var customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount)}
-    ]
-    await checkVariables(token, customVars);
-
-    await token.mint(arbitraryAccount, 50, {from: minterAccount});
-    customVars = [
-      {'variable': 'isAccountMinter.minterAccount', 'expectedValue': true},
-      {'variable': 'minterAllowance.minterAccount', 'expectedValue': new BigNumber(amount - 50)},
-      {'variable': 'balances.arbitraryAccount', 'expectedValue': new BigNumber(50)},
-      {'variable': 'totalSupply', 'expectedValue': new BigNumber(50)}
-    ]
-    await checkVariables(token, customVars);
-
-    var dataContractAddress = await token.getDataContractAddress();
-    var storage = EternalStorage.at(dataContractAddress);
-    await token.upgrade(pauserAccount, {from: upgraderAccount});
-    assert.equal(await storage.owner.call(), pauserAccount);
-
-    await expectRevert(token.transfer(pauserAccount, 50, {from: arbitraryAccount}));
-  })
+    await fail_transfer_contractNotOwner(token);
+  });
 
   //Begin configureMinter tests
+
+  it('should fail to configureMinter when sender is not masterMinter', async function () {
+    await fail_configureMinter_senderNotMasterMinter(token);
+  });
+
+  it('should fail to configureMinter when contract is not owner', async function () {
+    await fail_configureMinter_contractNotOwner(token);
+  });
+
+  it('should fail to configureMinter when paused', async function () {
+    await fail_configureMinter_paused(token);
+  });
+
+  //Begin removeMinter tests
+
+  it('should fail to removeMinter when sender is not masterMinter', async function () {
+    await fail_removeMinter_senderNotMasterMinter(token);
+  });
+
+  it('should fail to removeMinter when contract is not owner', async function () {
+    await fail_removeMinter_contractNotOwner(token);
+  });
+
+  //Begin burn tests
+
+  it('should fail to burn when balance is less than amount', async function () {
+    await fail_burn_balanceLessThanAmount(token);
+  });
+
+  it('should fail to burn when amount is -1', async function () {
+    await fail_burn_amountNegative(token);
+  });
+
+  it('should fail to burn when sender is blacklisted', async function () {
+    await fail_burn_senderBlacklisted(token);
+  });
+
+  it('should fail to burn when paused', async function () {
+    await fail_burn_paused(token);
+  });
+
+  it('should fail to burn when sender is not minter', async function () {
+    await fail_burn_senderNotMinter(token);
+  });
+
+  it('should fail to burn after removeMinter', async function () {
+    await fail_burn_afterRemoverMinter(token);
+  });
+
+  it('should fail to burn when contract is not owner', async function () {
+    await fail_burn_contractNotOwner(token);
+  });
+
+  //Begin updateRoleAddress/updateUpgraderAddress tests
+
+  // it('should fail to updateRoleAddress when sender is not roleAddressChanger', async function () {
+  //   await fail_updateRoleAddress_senderNotRoleAddressChanger(token);
+  // });
+  //
+  // it('should fail to updateRoleAddress when sender is old roleAddressChanger', async function () {
+  //   await fail_updateRoleAddress_senderIsOldRoleAddressChanger(token);
+  // });
+
+  it('should fail to updateUpgraderAddress when sender is not upgrader', async function () {
+    await fail_updateUpgraderAddress_senderNotUpgrader(token);
+  });
+
+  //Begin pause/unpause tests
+
+  it('should fail to pause when sender is not pauser', async function () {
+    await fail_pause_senderNotPauser(token);
+  });
+
+  it('should fail to unpause when sender is not pauser', async function () {
+    await fail_unpause_senderNotPauser(token);
+  });
+
+  //Begin blacklist/unblacklist tests
+
+  it('should fail to blacklist when sender is not blacklister', async function () {
+    await fail_blacklist_senderNotBlacklister(token);
+  });
+
+  it('should fail to unblacklist when sender is not blacklister', async function () {
+    await fail_unblacklist_senderNotBlacklister(token);
+  });
+
+  //Begin upgrade tests
+
+  it('should fail to upgrade when sender is not upgrader', async function () {
+    await fail_upgrade_senderNotUpgrader(token);
+  });
+
+  it('should fail to upgrade when upgradedAddress is not 0x0', async function () {
+    await fail_upgrade_upgradedAddressIsNotZeroAddress(token);
+  });
+
+  it('should fail to upgrade when newAddress is 0x0', async function () {
+    await fail_upgrade_newAddressIsZeroAddress(token);
+  });
+
+  //Begin disablePriorContract tests
+
+  // it('should fail to disablePriorContract when sender is not pauser', async function () {
+  //   await fail_disablePriorContract_senderNotPauser(token);
+  // });
 
 })
