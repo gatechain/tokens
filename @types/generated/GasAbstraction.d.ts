@@ -68,7 +68,15 @@ export interface GasAbstractionInstance extends Truffle.ContractInstance {
     txDetails?: Truffle.TransactionDetails
   ): Promise<string>;
 
+  DECREASE_ALLOWANCE_WITH_AUTHORIZATION_TYPEHASH(
+    txDetails?: Truffle.TransactionDetails
+  ): Promise<string>;
+
   DOMAIN_SEPARATOR(txDetails?: Truffle.TransactionDetails): Promise<string>;
+
+  INCREASE_ALLOWANCE_WITH_AUTHORIZATION_TYPEHASH(
+    txDetails?: Truffle.TransactionDetails
+  ): Promise<string>;
 
   TRANSFER_WITH_AUTHORIZATION_TYPEHASH(
     txDetails?: Truffle.TransactionDetails
@@ -198,7 +206,15 @@ export interface GasAbstractionInstance extends Truffle.ContractInstance {
       txDetails?: Truffle.TransactionDetails
     ): Promise<string>;
 
+    DECREASE_ALLOWANCE_WITH_AUTHORIZATION_TYPEHASH(
+      txDetails?: Truffle.TransactionDetails
+    ): Promise<string>;
+
     DOMAIN_SEPARATOR(txDetails?: Truffle.TransactionDetails): Promise<string>;
+
+    INCREASE_ALLOWANCE_WITH_AUTHORIZATION_TYPEHASH(
+      txDetails?: Truffle.TransactionDetails
+    ): Promise<string>;
 
     TRANSFER_WITH_AUTHORIZATION_TYPEHASH(
       txDetails?: Truffle.TransactionDetails
