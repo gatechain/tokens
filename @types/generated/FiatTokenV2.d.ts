@@ -108,6 +108,14 @@ export interface PauserChanged {
   };
 }
 
+export interface RescuerChanged {
+  name: "RescuerChanged";
+  args: {
+    newRescuer: string;
+    0: string;
+  };
+}
+
 export interface Transfer {
   name: "Transfer";
   args: {
@@ -145,6 +153,7 @@ type AllEvents =
   | OwnershipTransferred
   | Pause
   | PauserChanged
+  | RescuerChanged
   | Transfer
   | UnBlacklisted
   | Unpause;
@@ -424,6 +433,44 @@ export interface FiatTokenV2Instance extends Truffle.ContractInstance {
     ): Promise<number>;
   };
 
+  /**
+   * Rescue ERC20 tokens locked up in this contract.
+   * @param amount Amount to withdraw
+   * @param to Recipient address
+   * @param tokenContract ERC20 token contract address
+   */
+  rescueERC20: {
+    (
+      tokenContract: string,
+      to: string,
+      amount: number | BN | string,
+      txDetails?: Truffle.TransactionDetails
+    ): Promise<Truffle.TransactionResponse<AllEvents>>;
+    call(
+      tokenContract: string,
+      to: string,
+      amount: number | BN | string,
+      txDetails?: Truffle.TransactionDetails
+    ): Promise<void>;
+    sendTransaction(
+      tokenContract: string,
+      to: string,
+      amount: number | BN | string,
+      txDetails?: Truffle.TransactionDetails
+    ): Promise<string>;
+    estimateGas(
+      tokenContract: string,
+      to: string,
+      amount: number | BN | string,
+      txDetails?: Truffle.TransactionDetails
+    ): Promise<number>;
+  };
+
+  /**
+   * Returns current rescuer
+   */
+  rescuer(txDetails?: Truffle.TransactionDetails): Promise<string>;
+
   symbol(txDetails?: Truffle.TransactionDetails): Promise<string>;
 
   /**
@@ -601,6 +648,28 @@ export interface FiatTokenV2Instance extends Truffle.ContractInstance {
     ): Promise<string>;
     estimateGas(
       _newPauser: string,
+      txDetails?: Truffle.TransactionDetails
+    ): Promise<number>;
+  };
+
+  /**
+   * Assign the rescuer role to a given address.
+   * @param newRescuer New rescuer's address
+   */
+  updateRescuer: {
+    (newRescuer: string, txDetails?: Truffle.TransactionDetails): Promise<
+      Truffle.TransactionResponse<AllEvents>
+    >;
+    call(
+      newRescuer: string,
+      txDetails?: Truffle.TransactionDetails
+    ): Promise<void>;
+    sendTransaction(
+      newRescuer: string,
+      txDetails?: Truffle.TransactionDetails
+    ): Promise<string>;
+    estimateGas(
+      newRescuer: string,
       txDetails?: Truffle.TransactionDetails
     ): Promise<number>;
   };
@@ -880,6 +949,44 @@ export interface FiatTokenV2Instance extends Truffle.ContractInstance {
       ): Promise<number>;
     };
 
+    /**
+     * Rescue ERC20 tokens locked up in this contract.
+     * @param amount Amount to withdraw
+     * @param to Recipient address
+     * @param tokenContract ERC20 token contract address
+     */
+    rescueERC20: {
+      (
+        tokenContract: string,
+        to: string,
+        amount: number | BN | string,
+        txDetails?: Truffle.TransactionDetails
+      ): Promise<Truffle.TransactionResponse<AllEvents>>;
+      call(
+        tokenContract: string,
+        to: string,
+        amount: number | BN | string,
+        txDetails?: Truffle.TransactionDetails
+      ): Promise<void>;
+      sendTransaction(
+        tokenContract: string,
+        to: string,
+        amount: number | BN | string,
+        txDetails?: Truffle.TransactionDetails
+      ): Promise<string>;
+      estimateGas(
+        tokenContract: string,
+        to: string,
+        amount: number | BN | string,
+        txDetails?: Truffle.TransactionDetails
+      ): Promise<number>;
+    };
+
+    /**
+     * Returns current rescuer
+     */
+    rescuer(txDetails?: Truffle.TransactionDetails): Promise<string>;
+
     symbol(txDetails?: Truffle.TransactionDetails): Promise<string>;
 
     /**
@@ -1059,6 +1166,28 @@ export interface FiatTokenV2Instance extends Truffle.ContractInstance {
       ): Promise<string>;
       estimateGas(
         _newPauser: string,
+        txDetails?: Truffle.TransactionDetails
+      ): Promise<number>;
+    };
+
+    /**
+     * Assign the rescuer role to a given address.
+     * @param newRescuer New rescuer's address
+     */
+    updateRescuer: {
+      (newRescuer: string, txDetails?: Truffle.TransactionDetails): Promise<
+        Truffle.TransactionResponse<AllEvents>
+      >;
+      call(
+        newRescuer: string,
+        txDetails?: Truffle.TransactionDetails
+      ): Promise<void>;
+      sendTransaction(
+        newRescuer: string,
+        txDetails?: Truffle.TransactionDetails
+      ): Promise<string>;
+      estimateGas(
+        newRescuer: string,
         txDetails?: Truffle.TransactionDetails
       ): Promise<number>;
     };

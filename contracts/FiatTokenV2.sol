@@ -24,7 +24,7 @@
 
 pragma solidity 0.6.8;
 
-import { FiatTokenV1 } from "./FiatTokenV1.sol";
+import { FiatTokenV1_1 } from "./FiatTokenV1_1.sol";
 
 
 // solhint-disable no-empty-blocks
@@ -33,6 +33,6 @@ import { FiatTokenV1 } from "./FiatTokenV1.sol";
  * @title FiatTokenV2
  * @dev ERC20 Token backed by fiat reserves
  */
-contract FiatTokenV2 is FiatTokenV1 {
+contract FiatTokenV2 is FiatTokenV1_1 {
 
 }
