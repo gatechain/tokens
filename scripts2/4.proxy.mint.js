@@ -11,8 +11,12 @@ var Storage = contract(data);
 var provider = new Web3.providers.HttpProvider("http://123.57.233.34:8090");
 Storage.setProvider(provider);
 
-var address = '0x59Ab3063fe6b9fdcDA657490699f7994F182F646';
-var addressProxy = '0xC2adEE68D01bC82dD77f86ee3f8bf46b9De44251';
+var address = '0x52Bd138f68bD18c2Ee9dDBD62b36C60bDa4E8c3A';
+var addressProxy = '0xa3eD45768abfCE58Fc84A5DaCe71E838267D5Ccc';
+var address2 = '0x32c0A906AEBc32B276DB32988Dcb6aDa08514c1C';
+var utilAddress = '0xE344d42d34b47294092b7E6F86c63098B4fDE351';
+var updaterAddress = '0x5B173B95FfBE56020121954AD4CDEaa9fbDC6F69';
+
 
 var proxyInstance;
 Storage.at(addressProxy).then( function(instance) {
