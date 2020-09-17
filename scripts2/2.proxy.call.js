@@ -16,7 +16,7 @@ var addressProxy = '0x1ecaEf7AD2Ab8d7b61EdD3Ef64B205AAA13e63C3';
 
 //通过合约抽象与合约交互
 Storage.at(addressProxy).then( function(instance) {
-    return instance.symbol.call();    //call方式调用合约
+    return instance.totalSupply.call();    //call方式调用合约
 }).then(result=>{
     console.info(result.toString());    //0
 }).catch(err=>{

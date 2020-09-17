@@ -22,6 +22,12 @@ if (fs.existsSync(path.join(__dirname, "..", "config.js"))) {
     PAUSER_ADDRESS: pauserAddress,
     BLACKLISTER_ADDRESS: blacklisterAddress,
   } = require("../config.js"));
+  // console.log("proxyAdminAddress is :", proxyAdminAddress);
+  // console.log("ownerAddress is :", ownerAddress);
+  // console.log("masterMinterAddress is :", masterMinterAddress);
+  // console.log("pauserAddress is :", pauserAddress);
+  // console.log("blacklisterAddress is :", blacklisterAddress);
+
 }
 
 module.exports = async (deployer, network) => {
@@ -43,14 +49,14 @@ module.exports = async (deployer, network) => {
   console.log(`Blacklister:   ${blacklisterAddress}`);
 
   if (
-    !proxyAdminAddress ||
-    !ownerAddress ||
-    !masterMinterAddress ||
-    !pauserAddress ||
-    !blacklisterAddress
+      !proxyAdminAddress ||
+      !ownerAddress ||
+      !masterMinterAddress ||
+      !pauserAddress ||
+      !blacklisterAddress
   ) {
     throw new Error(
-      "PROXY_ADMIN_ADDRESS, OWNER_ADDRESS, MASTERMINTER_ADDRESS, PAUSER_ADDRESS, and BLACKLISTER_ADDRESS must be provided in config.js"
+        "PROXY_ADMIN_ADDRESS, OWNER_ADDRESS, MASTERMINTER_ADDRESS, PAUSER_ADDRESS, and BLACKLISTER_ADDRESS must be provided in config.js"
     );
   }
 
@@ -61,14 +67,14 @@ module.exports = async (deployer, network) => {
 
   console.log("Initializing implementation contract with dummy values...");
   await fiatTokenV1.initialize(
-    "",
-    "",
-    "",
-    0,
-    THROWAWAY_ADDRESS,
-    THROWAWAY_ADDRESS,
-    THROWAWAY_ADDRESS,
-    THROWAWAY_ADDRESS
+      "",
+      "",
+      "",
+      0,
+      THROWAWAY_ADDRESS,
+      THROWAWAY_ADDRESS,
+      THROWAWAY_ADDRESS,
+      THROWAWAY_ADDRESS
   );
 
   console.log("Deploying proxy contract...");
@@ -86,13 +92,17 @@ module.exports = async (deployer, network) => {
   // proxy will forward all the calls to the FiatTokenV1 impl
   const proxyAsV1 = await FiatTokenV1.at(FiatTokenProxy.address);
   await proxyAsV1.initialize(
-    "USD//C",
-    "USDC",
-    "USD",
-    6,
-    masterMinterAddress,
-    pauserAddress,
-    blacklisterAddress,
-    ownerAddress
+      "USD//GATE_TEST1",
+      "USDGT1",
+      "USD",
+      18,
+      masterMinterAddress,
+      pauserAddress,
+      blacklisterAddress,
+      ownerAddress
   );
+  // await proxyAsV1.decimals();
+  const proxyDes = await proxyAsV1.decimals();
+  console.log("proxyDes is :", proxyDes);
+
 };
