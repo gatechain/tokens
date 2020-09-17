@@ -14,11 +14,19 @@ Storage.setProvider(provider);
 var address = '0x5b977ee72664296084Ef4e6e66ea86f7c58c0d77';
 var addressProxy = '0x1ecaEf7AD2Ab8d7b61EdD3Ef64B205AAA13e63C3';
 
-//通过合约抽象与合约交互
+var proxyInstance;
 Storage.at(addressProxy).then( function(instance) {
-    return instance.totalSupply.call();    //call方式调用合约
+    proxyInstance = instance;
+    return proxyInstance.totalSupply.call();
 }).then(result=>{
-    console.info(result.toString());    //0
+    console.info(`before mint balance:`, result.toString());
+    return proxyInstance.mint("0x661B5421B81Cfa009D6b919362687f62B3B3Cb8b","1000",{from:"0x840de23b190bdc5a93352d7f0086f039a7e9e760"});
+    // return proxyInstance.totalSupply.call();
+}).then(result=>{
+    console.info(`mint result`, result.toString());
+    return proxyInstance.totalSupply.call();
+}).then(result=>{
+    console.info(`after mint balance:`, result.toString());
 }).catch(err=>{
-    console.info(err.toString());
+    console.log(err.toString());
 });

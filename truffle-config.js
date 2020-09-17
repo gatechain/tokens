@@ -44,6 +44,11 @@ module.exports = {
       provider: infuraProvider("ropsten"),
       network_id: 3,
     },
+    rinkey1: {
+      host: "123.57.233.34",
+      port: 8090,
+      network_id: "*", // Match any network id
+    },
   },
   mocha: {
     timeout: 10000, // prevents tests from failing when pc is under heavy load
