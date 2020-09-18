@@ -47,6 +47,7 @@ module.exports = {
     rinkey1: {
       host: "123.57.233.34",
       port: 8090,
+      from: "0x840de23b190bdc5a93352d7f0086f039a7e9e760",
       network_id: "*", // Match any network id
     },
   },
