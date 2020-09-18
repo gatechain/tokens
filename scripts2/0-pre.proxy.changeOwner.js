@@ -33,22 +33,27 @@ var proxyInstance;
 var proxyRealInstance;
 var updateInstance;
 
-// FiatProxyReal.at(addressProxy).then( function(instance) {
-//     proxyRealInstance = instance;
-// }).catch(err=>{
-//     console.log(err.toString());
-// });
-
-var updateInstance;
-FiatUpdater.at(updaterAddress).then( function(instance) {
-    updateInstance = instance;
-    // return proxyInstance.configureMinter("0x840de23b190bdc5a93352d7f0086f039a7e9e760","1000000000",{from:"0x840de23b190bdc5a93352d7f0086f039a7e9e760"});
-    return updateInstance.upgrade({from:"0x840de23b190bdc5a93352d7f0086f039a7e9e760"});
-}).then(result=>{
-    console.info(`update owner is :`, result.toString());
+FiatProxyReal.at(addressProxy).then( function(instance) {
+    proxyRealInstance = instance;
+    return proxyRealInstance.changeAdmin("0x0651B802c0D440f49DB4b0d3f7e8d9e3B5761021", {from:"0x840de23b190bdc5a93352d7f0086f039a7e9e760"});
 }).catch(err=>{
     console.log(err.toString());
 });
+
+
+// 0x6cba6f3993f1f36a61806cb20c88d0ae13353ef6
+
+//
+// var updateInstance;
+// FiatUpdater.at(updaterAddress).then( function(instance) {
+//     updateInstance = instance;
+//     // return proxyInstance.configureMinter("0x840de23b190bdc5a93352d7f0086f039a7e9e760","1000000000",{from:"0x840de23b190bdc5a93352d7f0086f039a7e9e760"});
+//     return updateInstance.transferOwnership("0x6cba6f3993f1f36a61806cb20c88d0ae13353ef6",{from:"0x840de23b190bdc5a93352d7f0086f039a7e9e760"});
+// }).then(result=>{
+//     console.info(`update owner is :`, result.toString());
+// }).catch(err=>{
+//     console.log(err.toString());
+// });
 
 
 
