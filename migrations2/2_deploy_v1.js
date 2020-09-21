@@ -95,7 +95,7 @@ module.exports = async (deployer, network) => {
       "USD-GATE",
       "USDG",
       "USD",
-      18,
+      6,
       masterMinterAddress,
       pauserAddress,
       blacklisterAddress,
