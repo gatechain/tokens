@@ -44,6 +44,10 @@ module.exports = {
       provider: infuraProvider("ropsten"),
       network_id: 3,
     },
+    rinkeby: {
+      provider: infuraProvider("rinkeby"),
+      network_id: 4,
+    },
     rinkey1: {
       host: "123.57.233.34",
       port: 8090,
