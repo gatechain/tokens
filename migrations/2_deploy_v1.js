@@ -92,7 +92,7 @@ module.exports = async (deployer, network) => {
   // proxy will forward all the calls to the FiatTokenV1 impl
   const proxyAsV1 = await FiatTokenV1.at(FiatTokenProxy.address);
   await proxyAsV1.initialize(
-      "USD-GATE",
+      "GATE USD",
       "USDG",
       "USD",
       6,
