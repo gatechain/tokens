@@ -2,7 +2,7 @@ module.exports = {
   // BIP39 mnemonic phrase
   MNEMONIC: "",
   // INFURA API key
-  INFURA_KEY: "",
+  INFURA_KEY: "32a95ab02928414c866599acd8f2a02b",
   // FiatTokenProxy admin - can upgrade implementation contract
   PROXY_ADMIN_ADDRESS: "0x6cba6f3993f1f36a61806cb20c88d0ae13353ef6",
   // Owner - can configure master minter, pauser, and blacklister
