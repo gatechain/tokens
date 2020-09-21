@@ -11,11 +11,11 @@ var Storage = contract(data);
 var provider = new Web3.providers.HttpProvider("http://123.57.233.34:8090");
 Storage.setProvider(provider);
 
-var address = '0xf1DEaf2DE6A8d0145E0De5653420244905AAC3f5';
-var addressProxy = '0x572Ee543250622582b37802cFa05BFFA300D5367';
-var address2 = '0x771D7d517dd047bC58b245811794ea9328A15641';
-var utilAddress = '0x3205116Dc89f0d246bd1ef24f24d0B7C61A0a277';
-var updaterAddress = '0x0651B802c0D440f49DB4b0d3f7e8d9e3B5761021';
+var address = '0xA850857BFe6Be2783375dCA2D7f998406DAfedC9';
+var addressProxy = '0x3785e72CC24B13e6367Bb6bd5b536CdD27CeF6e1';
+var address2 = '0x6e4F5c04D6eA9d45666947B2156ec06192b4C24F';
+var utilAddress = '0x5079eE8B62699F3DEc77c64416815edC4F510264';
+var updaterAddress = '0xd838340B574678B34C628D95d81494e1a5FD1401';
 
 //通过合约抽象与合约交互
 Storage.at(addressProxy).then( function(instance) {
