@@ -22,12 +22,6 @@ if (fs.existsSync(path.join(__dirname, "..", "config.js"))) {
     PAUSER_ADDRESS: pauserAddress,
     BLACKLISTER_ADDRESS: blacklisterAddress,
   } = require("../config.js"));
-  // console.log("proxyAdminAddress is :", proxyAdminAddress);
-  // console.log("ownerAddress is :", ownerAddress);
-  // console.log("masterMinterAddress is :", masterMinterAddress);
-  // console.log("pauserAddress is :", pauserAddress);
-  // console.log("blacklisterAddress is :", blacklisterAddress);
-
 }
 
 module.exports = async (deployer, network) => {
@@ -48,16 +42,8 @@ module.exports = async (deployer, network) => {
   console.log(`Pauser:        ${pauserAddress}`);
   console.log(`Blacklister:   ${blacklisterAddress}`);
 
-  if (
-      !proxyAdminAddress ||
-      !ownerAddress ||
-      !masterMinterAddress ||
-      !pauserAddress ||
-      !blacklisterAddress
-  ) {
-    throw new Error(
-        "PROXY_ADMIN_ADDRESS, OWNER_ADDRESS, MASTERMINTER_ADDRESS, PAUSER_ADDRESS, and BLACKLISTER_ADDRESS must be provided in config.js"
-    );
+  if (!proxyAdminAddress || !ownerAddress || !masterMinterAddress || !pauserAddress || !blacklisterAddress) {
+    throw new Error("PROXY_ADMIN_ADDRESS, OWNER_ADDRESS, MASTERMINTER_ADDRESS, PAUSER_ADDRESS, and BLACKLISTER_ADDRESS must be provided in config.js");
   }
 
   console.log("Deploying implementation contract...");
