@@ -1,7 +1,5 @@
 // File: @openzeppelin/contracts/math/SafeMath.sol
 
-// SPDX-License-Identifier: MIT
-
 pragma solidity ^0.6.0;
 
 /**
@@ -162,6 +160,7 @@ library SafeMath {
 
 // File: @openzeppelin/contracts/token/ERC20/IERC20.sol
 
+
 pragma solidity ^0.6.0;
 
 /**
@@ -240,6 +239,8 @@ interface IERC20 {
 
 // File: contracts/v1/AbstractFiatTokenV1.sol
 
+
+
 pragma solidity 0.6.12;
 
 
@@ -258,6 +259,7 @@ abstract contract AbstractFiatTokenV1 is IERC20 {
 }
 
 // File: contracts/v1/Ownable.sol
+
 
 pragma solidity 0.6.12;
 
@@ -326,6 +328,8 @@ contract Ownable {
 }
 
 // File: contracts/v1/Pausable.sol
+
+
 
 pragma solidity 0.6.12;
 
@@ -397,6 +401,8 @@ contract Pausable is Ownable {
 }
 
 // File: contracts/v1/Blacklistable.sol
+
+
 
 pragma solidity 0.6.12;
 
@@ -474,7 +480,15 @@ contract Blacklistable is Ownable {
 
 // File: contracts/v1/FiatTokenV1.sol
 
+
+
 pragma solidity 0.6.12;
+
+
+
+
+
+
 /**
  * @title FiatToken
  * @dev ERC20 Token backed by fiat reserves
