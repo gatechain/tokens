@@ -2,7 +2,11 @@
 
 1. reMigrate
 
-truffle migrate --interactive --reset --network rinkey1
+truffle migrate --interactive --reset --network rinkeby
+
+or skip-dry-run
+
+truffle migrate --interactive --reset --skip-dry-run --network rinkeby
 
 2.execute contract method
 

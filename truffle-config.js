@@ -54,6 +54,11 @@ module.exports = {
       from: "0x840de23b190bdc5a93352d7f0086f039a7e9e760",
       network_id: "*", // Match any network id
     },
+    Meteora: {
+      provider: MeteoraProvider(),
+      network_id: 1337,
+      gasPrice: 10000000000000,
+    },
   },
   mocha: {
     timeout: 10000, // prevents tests from failing when pc is under heavy load
@@ -75,6 +80,15 @@ function infuraProvider(network) {
     return new HDWalletProvider(
       config.MNEMONIC,
       `https://${network}.infura.io/v3/${config.INFURA_KEY}`
+    );
+  };
+}
+
+function MeteoraProvider() {
+  return () => {
+    return new HDWalletProvider(
+        config.MNEMONIC,
+        `http://meteora.gatenode.cc:6060/`
     );
   };
 }
